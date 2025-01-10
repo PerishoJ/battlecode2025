@@ -1,8 +1,10 @@
-package skulls.and.bunnies.one;
+package splashers;
 
 import battlecode.common.*;
 
-import java.util.Random;
+import java.util.*;
+
+import static java.lang.Math.*;
 
 
 /**
@@ -11,6 +13,8 @@ import java.util.Random;
  * is created!
  */
 public class RobotPlayer {
+    public static final int MINIMUM_ACCEPTABLE_DAMAGE = 5;
+    private static final HashSet<MapLocation> paintTowers = new HashSet<>();
     /**
      * We will use this variable to count the number of turns this robot has been alive.
      * You can use static variables like this to save any information you want. Keep in mind that even though
@@ -37,6 +41,8 @@ public class RobotPlayer {
         Direction.WEST,
         Direction.NORTHWEST,
     };
+    private static boolean isInBlashZone;
+    private static boolean hasBuilt = false;
 
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -70,7 +76,7 @@ public class RobotPlayer {
                 switch (rc.getType()){
                     case SOLDIER: runSoldier(rc); break; 
                     case MOPPER: runMopper(rc); break;
-                    case SPLASHER: break; // Consider upgrading examplefuncsplayer to use splashers!
+                    case SPLASHER: runSplasher(rc); break;
                     default: runTower(rc); break;
                     }
                 }
@@ -98,6 +104,137 @@ public class RobotPlayer {
         // Your code should never reach here (unless it's intentional)! Self-destruction imminent...
     }
 
+    private static void runSplasher(RobotController rc) throws GameActionException {
+        // SPLISH SPLASH TIME TO TAKE A BATH!
+        RobotInfo[] bots = rc.senseNearbyRobots();
+        for(RobotInfo bot : bots){
+            if(bot.getType().isTowerType() && bot.getTeam().equals(rc.getTeam())) {
+                if(bot.getType() == UnitType.LEVEL_THREE_PAINT_TOWER
+                    || bot.getType() == UnitType.LEVEL_TWO_PAINT_TOWER
+                    || bot.getType() == UnitType.LEVEL_ONE_PAINT_TOWER){
+                    paintTowers.add(bot.getLocation()); // set will automatically kick it if already there.
+                    //TODO remove destroyed towers from this list
+                }
+            }
+        }
+
+        boolean isOnHallowedGround = rc.senseMapInfo(rc.getLocation()).getPaint().isAlly();
+        //don't go below 1/2 health unless
+        MapLocation bestSplashPlace = null;
+        // Will I go into handicap paint levels( lvl <1/2 paint capacity) if I attack one more time???
+        boolean willCauseNoHandicaps = ( rc.getPaint() >= (UnitType.SPLASHER.paintCapacity / 2 ) + UnitType.SPLASHER.attackCost);
+
+        if(rc.isActionReady() && willCauseNoHandicaps) {
+            splashStuff(rc);
+        }
+
+        if(willCauseNoHandicaps) {
+            //or, just randomly TEND to move away from the paint tower that you found
+            if(rng.nextBoolean()){
+                if(!paintTowers.isEmpty()) {
+                    Direction away = getNearestPaintTower(rc).directionTo(rc.getLocation());
+                    rc.move(away);
+                } else {moveRnd(rc);}
+            } else {
+                    moveRnd(rc); // Bumble around painting random junk
+                }
+        } else { // oh no, the paint is running out, and we are about to take performance losses. Retreat
+            tryToRefillPaint(rc);
+        }
+
+    }
+
+    private static void tryToRefillPaint(RobotController rc) throws GameActionException {
+        System.out.println("Moving to a paint tower");
+        if(!paintTowers.isEmpty()) {
+            MapLocation nearestPaintTower = getNearestPaintTower(rc);
+
+            Direction dirToTower =  rc.getLocation().directionTo(nearestPaintTower);
+            if(rc.canMove(dirToTower))
+                rc.move(dirToTower);
+
+            RobotInfo towerInfo = rc.senseRobotAtLocation(nearestPaintTower);
+            // Either take what's left in the tower, or however much you can carry
+            int paintAvailable = min( towerInfo.getPaintAmount() , UnitType.SPLASHER.paintCapacity-rc.getPaint());
+            System.out.println("Transfering " + paintAvailable + " paint");
+            if(rc.canTransferPaint(nearestPaintTower, -paintAvailable)){
+                rc.transferPaint(nearestPaintTower, -paintAvailable);
+            }; //set paint to negative since we are taking it
+        } else {
+            moveRnd(rc);
+            System.out.println("Looking for paint tower");
+        }
+    }
+
+    private static MapLocation getNearestPaintTower(RobotController rc) {
+        MapLocation nearestPaintTower = null;
+        int closestDist = Integer.MAX_VALUE;
+        for( MapLocation loc : paintTowers){
+           if(nearestPaintTower == null){
+               nearestPaintTower = loc;
+               closestDist = loc.distanceSquaredTo(rc.getLocation());
+           } else {
+               if(loc.distanceSquaredTo(rc.getLocation())<closestDist){
+                   nearestPaintTower = loc;
+                   closestDist = loc.distanceSquaredTo(rc.getLocation());
+               }
+           }
+        }
+        return nearestPaintTower;
+    }
+
+    private static void splashStuff(RobotController rc) throws GameActionException {
+        // Find all the nearby places you can paint
+        MapInfo[] nearbyInfo = rc.senseNearbyMapInfos(); // TODO kinda expensive, could track this better later
+        Set<MapLocation> paintablePlaces = new HashSet<>();
+        // TODO add more heuristic data so splashers prioritize HQ's and enemy robots
+        for(MapInfo cell : nearbyInfo){
+            if(!cell.isWall() && !cell.getPaint().isAlly()){ //can't paint walls, shouldn't repaint
+                paintablePlaces.add(cell.getMapLocation());
+            }
+        }
+
+        // Pick some random spots, and see how much paint WOULD be painted if it were splashed there
+        // ...pay close attention to bytecode count, cuz I'd rather abort or NOT paint than run out of bytecodes
+        int rng = (int) ceil(sqrt(UnitType.SPLASHER.actionRadiusSquared)); // Because this isn't a constant for some reason
+        MapLocation bestSplashPlace = null;
+        int bestDamage = MINIMUM_ACCEPTABLE_DAMAGE;
+        // go through each attackable place...just kidding. Just check the top,bottom,left,right, and middle locations cuz we're low on bytecodes.
+        // Mostly because I can't think of a good dynamic coding solution...maybe convolutions and byte masking, but that'll take forever.
+        for(int attackX = -rng ; attackX <= rng ; attackX+=rng){ //just simplify this junk
+            for(int attachY = -rng ; attachY <= rng ; attachY+=rng){
+                boolean inRange = (attackX * attackX + attachY * attachY) < rng;
+                if(inRange) {
+                    MapLocation testPlace = rc.getLocation();
+                    testPlace = testPlace.translate(attackX,attachY);
+                    int splashRadius = UnitType.SPLASHER.actionRadiusSquared;
+                    int damage = 0;
+                    //Estimate the damge it'll do
+                    //got through each place in the blast zone to see if it'll leave paint
+                    for(int x = -splashRadius ; x<=splashRadius;x++){
+                        for(int y = -splashRadius ; y<=splashRadius;y++){
+                            isInBlashZone = x * x + y * y < splashRadius;
+                            if (isInBlashZone){
+                                if(paintablePlaces.contains(testPlace.translate(x,y))){
+                                    damage ++;
+                                }
+                            }
+                        }
+                    }
+                    if(damage>bestDamage){
+                        bestSplashPlace = testPlace;
+                        bestDamage = damage;
+                    }
+                }
+            }
+
+        }
+
+        if(bestSplashPlace!=null && rc.canAttack(bestSplashPlace)){
+            rc.attack(bestSplashPlace);
+        }
+    }
+
     /**
      * Run a single turn for towers.
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
@@ -107,19 +244,23 @@ public class RobotPlayer {
         Direction dir = directions[rng.nextInt(directions.length)];
         MapLocation nextLoc = rc.getLocation().add(dir);
         // Pick a random robot type to build.
-        int robotType = rng.nextInt(3);
-        if (robotType == 0 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)){
-            rc.buildRobot(UnitType.SOLDIER, nextLoc);
-            System.out.println("BUILT A SOLDIER");
-        }
-        else if (robotType == 1 && rc.canBuildRobot(UnitType.MOPPER, nextLoc)){
-            rc.buildRobot(UnitType.MOPPER, nextLoc);
-            System.out.println("BUILT A MOPPER");
-        }
-        else if (robotType == 2 && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)){
-            // rc.buildRobot(UnitType.SPLASHER, nextLoc);
-            // System.out.println("BUILT A SPLASHER");
+        int robotType = rng.nextInt(2);
+//        if (robotType == 0 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)){
+//            rc.buildRobot(UnitType.SOLDIER, nextLoc);
+//            System.out.println("BUILT A SOLDIER");
+//        }
+//        if (robotType == 0 && rc.canBuildRobot(UnitType.MOPPER, nextLoc)){
+//            rc.buildRobot(UnitType.MOPPER, nextLoc);
+//            System.out.println("BUILT A MOPPER");
+//        }
+//        else
+
+
+        if (!hasBuilt && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)){
+             rc.buildRobot(UnitType.SPLASHER, nextLoc);
+             System.out.println("BUILT A SPLASHER");
             rc.setIndicatorString("SPLASHER NOT IMPLEMENTED YET");
+            hasBuilt =true;
         }
 
         // Read incoming messages
@@ -128,7 +269,36 @@ public class RobotPlayer {
             System.out.println("Tower received message: '#" + m.getSenderID() + " " + m.getBytes());
         }
 
-        // TODO: can we attack other bots?
+
+        murderNearbyRobotsWithTower(rc);
+    }
+
+    private static void murderNearbyRobotsWithTower(RobotController rc) throws GameActionException {
+        // Murder any robots stupid enough to come close
+        RobotInfo[] robots = rc.senseNearbyRobots();
+        RobotInfo leastHealthBot = null;
+        for(RobotInfo bot : robots){
+            // can we attack this?
+            if(bot.getTeam() != rc.getTeam() && rc.canAttack(bot.getLocation())){
+                if(leastHealthBot != null) {
+                    // target the weak!
+                    if (bot.getHealth() <= leastHealthBot.getHealth()) {
+                        leastHealthBot = bot;
+                    // target the closest
+                    } else if (bot.getHealth() == leastHealthBot.getHealth()
+                            && bot.location.distanceSquaredTo(rc.getLocation()) < leastHealthBot.location.distanceSquaredTo(rc.getLocation())){
+                        leastHealthBot = bot;
+                    }
+                } else {
+                    leastHealthBot = bot;
+                }
+            }
+        }
+        //...now murder them
+        if(leastHealthBot!=null && rc.canAttack(leastHealthBot.getLocation())){
+            rc.attack(leastHealthBot.getLocation());
+            rc.setIndicatorLine(rc.getLocation(),leastHealthBot.getLocation(),255,0,0);
+        }
     }
 
 
@@ -194,6 +364,7 @@ public class RobotPlayer {
             if (tile.hasRuin()){
                 curRuin = tile;
             }
+
         }
         return curRuin;
     }
@@ -207,18 +378,25 @@ public class RobotPlayer {
         // Move and attack randomly.
         Direction dir = directions[rng.nextInt(directions.length)];
         MapLocation nextLoc = rc.getLocation().add(dir);
-        if (rc.canMove(dir)){
-            rc.move(dir);
-        }
+        moveRnd(rc);
+
         if (rc.canMopSwing(dir)){
             rc.mopSwing(dir);
-            System.out.println("Mop Swing! Booyah!");
+//            System.out.println("Mop Swing! Booyah!");
         }
         else if (rc.canAttack(nextLoc)){
             rc.attack(nextLoc);
         }
         // We can also move our code into different methods or classes to better organize it!
         updateEnemyRobots(rc);
+    }
+
+    public static void moveRnd(RobotController rc) throws GameActionException {
+        Direction dir = directions[rng.nextInt(directions.length)];
+        MapLocation nextLoc = rc.getLocation().add(dir);
+        if (rc.canMove(dir)){
+            rc.move(dir);
+        }
     }
 
     public static void updateEnemyRobots(RobotController rc) throws GameActionException{
