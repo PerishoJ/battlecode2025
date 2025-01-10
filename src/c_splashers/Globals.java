@@ -1,4 +1,4 @@
-package x_splashers;
+package c_splashers;
 
 import battlecode.common.*;
 

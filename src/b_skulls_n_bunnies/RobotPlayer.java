@@ -1,4 +1,4 @@
-package y_skulls_n_bunnies_1;
+package b_skulls_n_bunnies;
 
 import battlecode.common.*;
 
