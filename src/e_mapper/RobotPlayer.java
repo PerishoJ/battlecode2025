@@ -1,4 +1,4 @@
-package d_mapper;
+package e_mapper;
 
 import battlecode.common.*;
 

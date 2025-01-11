@@ -1,7 +1,6 @@
-package d_mapper;
+package f_c2;
 
 import battlecode.common.Clock;
-import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.UnitType;
 

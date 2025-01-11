@@ -1,4 +1,4 @@
-package d_mapper;
+package e_mapper;
 
 import battlecode.common.*;
 
@@ -10,7 +10,6 @@ public class SplasherBehavior {
     static final int MINIMUM_ACCEPTABLE_DAMAGE = 5;
     public static final double FULL_ENOUGH_PERCENT = 0.95;
     public static final int ATTACK_SCAN_THROTTLE = 3; // kept running out of bytecodes...so
-
     static boolean shouldFindPaint = false; // This is here so that robots STAY at the paint tower until they are full again
 
     static void run(RobotController rc) throws Exception{
@@ -114,7 +113,7 @@ public class SplasherBehavior {
                 if(Util.isOnMap(testPlace.x+x, testPlace.y+y)) {
                     boolean isInBlashZone = x * x + y * y < splashRadius;
                     MapLocation blastSection = testPlace.translate(x,y);
-                    MapInfo bInfo = Mapper.get(blastSection.x, blastSection.y);
+                    MapInfo bInfo = Mapper.get(blastSection.x, blastSection.y).mapInfo;
                     if (isInBlashZone) {
                         if (    bInfo == null // Optimistic damage estimation here. If you can't see it, it's GOTTA work
                                 || isPaintable(bInfo) // realistic, accurate prediction
@@ -130,8 +129,7 @@ public class SplasherBehavior {
     }
 
     private static void updateCache(MapLocation testPlace, int damage) {
-        MapInfoDecorator attackInfo = new MapInfoDecorator(Mapper.get(testPlace));
-        attackInfo.lastUpdated = RobotPlayer.turnCount;
+        MapInfoDecorator attackInfo = new MapInfoDecorator(Mapper.get(testPlace).mapInfo); //automatically sets turn count
         attackInfo.paintEffectiveness = damage;
         Mapper.set(attackInfo);
     }

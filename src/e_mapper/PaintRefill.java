@@ -1,4 +1,4 @@
-package d_mapper;
+package e_mapper;
 
 import battlecode.common.*;
 
@@ -12,6 +12,7 @@ public class PaintRefill {
     static void findNearbyPaintTowers(RobotController rc, RobotInfo[] bots, Message[] msgs) {
         for(Message msg : msgs){
             RobotInfo bot = RobotInfoCodec.decode(msg.getBytes());
+            recordIfPaintTower(rc, bot);
         }
         for(RobotInfo bot : bots){
             recordIfPaintTower(rc, bot);
@@ -29,9 +30,7 @@ public class PaintRefill {
     }
 
     static void tryToRefillPaint(RobotController rc) throws GameActionException {
-//        System.out.println("Moving to a paint tower");
         if(!paintTowers.isEmpty()) {
-//            Util.timerStart();
             MapLocation closestTowerLocation = getNearestPaintTower(rc);
 
             Direction dirToTower =  rc.getLocation().directionTo(closestTowerLocation);
@@ -60,6 +59,7 @@ public class PaintRefill {
                 } //set paint to negative since we are taking it
             }
 //            Util.timerEnd("Xfer Paint");
+            rc.setIndicatorString("Returning to refill paint");
         } else {
             Wanderer.moveRnd(rc);
             rc.setIndicatorString("I don't know where paint is!!!");

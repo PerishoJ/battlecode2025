@@ -1,4 +1,4 @@
-package d_mapper;
+package e_mapper;
 
 import battlecode.common.MapInfo;
 import battlecode.common.MapLocation;
@@ -36,7 +36,7 @@ public class Mapper {
     }
 
     static void set(MapInfoDecorator info){
-        map[info.getMapLocation().x][info.getMapLocation().y] = info;
+        map[info.mapInfo.getMapLocation().x][info.mapInfo.getMapLocation().y] = info;
     }
 
     static MapInfoDecorator get(MapLocation loc){

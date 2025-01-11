@@ -5,11 +5,11 @@ import battlecode.common.*;
 import static java.lang.Math.ceil;
 import static java.lang.Math.sqrt;
 
-public class SplasherBehavior {
+public class SplasherBehavior_II {
 
     static final int MINIMUM_ACCEPTABLE_DAMAGE = 5;
     public static final double FULL_ENOUGH_PERCENT = 0.95;
-    public static final int ATTACK_SCAN_THROTTLE = 3; // kept running out of bytecodes...so
+    public static final int ATTACK_SCAN_THROTTLE = 4; // kept running out of bytecodes...so
 
     static boolean shouldFindPaint = false; // This is here so that robots STAY at the paint tower until they are full again
 
@@ -28,8 +28,12 @@ public class SplasherBehavior {
 //        Util.timerEnd("Find Towers");
         // Will I go into handicap paint levels( lvl <1/2 paint capacity) if I attack one more time???
         boolean isHandicapped = rc.getPaint() < UnitType.SPLASHER.paintCapacity / 2 ;
+        MapLocation bestSplashPlace = getBestSplashPlace(rc);
         if(rc.isActionReady() && !isHandicapped) {
-            splashStuff(rc);
+            if( null != bestSplashPlace
+                    && rc.canAttack(bestSplashPlace)){
+                rc.attack(bestSplashPlace);
+            }
         }
 
         if(!isHandicapped && !shouldFindPaint) {
@@ -48,7 +52,7 @@ public class SplasherBehavior {
         return rc.getPaint() > (rc.getType().paintCapacity * FULL_ENOUGH_PERCENT);
     }
 
-    static void splashStuff(RobotController rc) throws GameActionException {
+    static MapLocation getBestSplashPlace(RobotController rc) throws GameActionException {
         // Pick some random spots, and see how much paint WOULD be painted if it were splashed there
         // ...pay close attention to bytecode count, cuz I'd rather abort or NOT paint than run out of bytecodes
         int rng = (int) ceil(sqrt(UnitType.SPLASHER.actionRadiusSquared)); // Because this isn't a constant for some reason
@@ -61,10 +65,8 @@ public class SplasherBehavior {
                 bestAttackResult = getAttackResult(rc, attackX, attachY, rng, bestAttackResult); // Only returns a new value if higher score
             }
         }
-        if( null != bestAttackResult.bestSplashPlace()
-                && rc.canAttack(bestAttackResult.bestSplashPlace())){
-            rc.attack(bestAttackResult.bestSplashPlace());
-        }
+
+        return bestAttackResult.bestSplashPlace;
 //        Util.timerEnd("Damage Calculation");
     }
 
