@@ -1,4 +1,4 @@
-package d_comms;
+package d_mapper;
 
 import battlecode.common.*;
 

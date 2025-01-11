@@ -1,4 +1,4 @@
-package d_comms;
+package d_mapper;
 
 import battlecode.common.*;
 
@@ -38,8 +38,6 @@ public class RobotPlayer {
         Direction.NORTHWEST,
     };
 
-    private static boolean hasBuilt = false;
-
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
      * It is like the main function for your robot. If this method returns, the robot dies!
@@ -52,10 +50,11 @@ public class RobotPlayer {
         // Hello world! Standard output is very useful for debugging.
         // Everything you say here will be directly viewable in your terminal when you run a match!
         System.out.println("I'm alive");
-
+        rng.setSeed(rc.getID()); // otherwise rnd tends to produce similar values
         // You can also use indicators to save debug notes in replays.
         rc.setIndicatorString("Hello world!");
         Globals.init(rc);
+        Mapper.init(rc);
         while (true) {
             // This code runs during the entire lifespan of the robot, which is why it is in an infinite
             // loop. If we ever leave this loop and return from run(), the robot dies! At the end of the
@@ -72,8 +71,8 @@ public class RobotPlayer {
                 switch (rc.getType()){
                     case SOLDIER: runSoldier(rc); break; 
                     case MOPPER: runMopper(rc); break;
-                    case SPLASHER: runSplasher(rc); break;
-                    default: runTower(rc); break;
+                    case SPLASHER: SplasherBehavior.run(rc); break;
+                    default: TowerBehavior.run(rc); break;
                     }
                 }
              catch (GameActionException e) {
@@ -98,125 +97,6 @@ public class RobotPlayer {
         }
 
         // Your code should never reach here (unless it's intentional)! Self-destruction imminent...
-    }
-
-    private static void runSplasher(RobotController rc) throws GameActionException {
-        // SPLISH SPLASH TIME TO TAKE A BATH!
-        RobotInfo[] bots = rc.senseNearbyRobots();
-        Message[] msgs = rc.readMessages(-1);
-
-        PaintRefill.findNearbyPaintTowers(rc, bots, msgs);
-
-        boolean isOnHallowedGround = rc.senseMapInfo(rc.getLocation()).getPaint().isAlly();
-        //don't go below 1/2 health unless
-        MapLocation bestSplashPlace = null;
-        // Will I go into handicap paint levels( lvl <1/2 paint capacity) if I attack one more time???
-        boolean willCauseNoHandicaps = ( rc.getPaint() >= (UnitType.SPLASHER.paintCapacity / 2 ) + UnitType.SPLASHER.attackCost);
-
-        if(rc.isActionReady() && willCauseNoHandicaps) {
-            SplasherBehavior.splashStuff(rc);
-        }
-
-        if(willCauseNoHandicaps) {
-            moveRnd(rc); // Bumble around painting random junk
-        } else { // oh no, the paint is running out, and we are about to take performance losses. Retreat
-            PaintRefill.tryToRefillPaint(rc);
-        }
-
-    }
-
-    /**
-     * Run a single turn for towers.
-     * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
-     */
-    public static void runTower(RobotController rc) throws GameActionException{
-        // Pick a direction to build in.
-        Direction dir = directions[rng.nextInt(directions.length)];
-        MapLocation nextLoc = rc.getLocation().add(dir);
-        // Pick a random robot type to build.
-        int robotType = rng.nextInt(2);
-//        if (robotType == 0 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)){
-//            rc.buildRobot(UnitType.SOLDIER, nextLoc);
-//            System.out.println("BUILT A SOLDIER");
-//        }
-//        if (robotType == 0 && rc.canBuildRobot(UnitType.MOPPER, nextLoc)){
-//            rc.buildRobot(UnitType.MOPPER, nextLoc);
-//            System.out.println("BUILT A MOPPER");
-//        }
-//        else
-
-
-
-        if (!hasBuilt && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)){
-             rc.buildRobot(UnitType.SPLASHER, nextLoc);
-             System.out.println("BUILT A SPLASHER");
-            rc.setIndicatorString("SPLASHER NOT IMPLEMENTED YET");
-            hasBuilt =true;
-        }
-
-        // Read incoming messages
-        Message[] messages = rc.readMessages(-1);
-        for (Message m : messages) {
-            System.out.println("Tower received message: '#" + m.getSenderID() + " " + m.getBytes());
-        }
-
-        RobotInfo[] robots = rc.senseNearbyRobots();
-
-        if(Util.isPaintTower(rc.getType()) && robots.length>0)
-            System.out.println("tower sees " + robots.length + " robots");
-
-        for(RobotInfo robot : robots){
-
-            StringBuilder bld = new StringBuilder("Tower sees robot that is ");
-            if(rc.getTeam().equals(robot.getTeam()) )
-                bld.append("on the same team,");
-            if(robot.getType().isRobotType() )
-                bld.append("it is a robot, ");
-            if(Util.isPaintTower(rc.getType()) )
-                bld.append("I am a paint tower,");
-            if( rc.canSendMessage(robot.getLocation()))
-                bld.append("I CAN send a message");
-            System.out.println(bld);
-
-
-            if(     rc.getTeam().equals(robot.getTeam())
-                    && robot.getType().isRobotType()
-                    && Util.isPaintTower(rc.getType())
-                    && rc.canSendMessage(robot.getLocation())
-            ){
-                System.out.println("Tower is sending coordinates");
-                rc.sendMessage(robot.getLocation() , RobotInfoCodec.encode(robot));
-            }
-        }
-        murderNearbyRobotsWithTower(rc,robots);
-    }
-
-
-    private static void murderNearbyRobotsWithTower(RobotController rc, RobotInfo[] robots ) throws GameActionException {
-        // Murder any robots stupid enough to come close
-        RobotInfo leastHealthBot = null;
-        for(RobotInfo bot : robots){
-            // can we attack this?
-            if(bot.getTeam() != rc.getTeam() && rc.canAttack(bot.getLocation())){
-                if(leastHealthBot != null) {
-                    // target the weak!
-                    if (bot.getHealth() <= leastHealthBot.getHealth()) {
-                        leastHealthBot = bot;
-                    // target the closest
-                    } else if (bot.getHealth() == leastHealthBot.getHealth()
-                            && bot.location.distanceSquaredTo(rc.getLocation()) < leastHealthBot.location.distanceSquaredTo(rc.getLocation())){
-                        leastHealthBot = bot;
-                    }
-                } else {
-                    leastHealthBot = bot;
-                }
-            }
-        }
-        //...now murder them
-        if(leastHealthBot!=null && rc.canAttack(leastHealthBot.getLocation())){
-            rc.attack(leastHealthBot.getLocation());
-            rc.setIndicatorLine(rc.getLocation(),leastHealthBot.getLocation(),255,0,0);
-        }
     }
 
 
@@ -296,7 +176,7 @@ public class RobotPlayer {
         // Move and attack randomly.
         Direction dir = directions[rng.nextInt(directions.length)];
         MapLocation nextLoc = rc.getLocation().add(dir);
-        moveRnd(rc);
+        Wanderer.moveRnd(rc);
 
         if (rc.canMopSwing(dir)){
             rc.mopSwing(dir);
@@ -307,31 +187,6 @@ public class RobotPlayer {
         }
         // We can also move our code into different methods or classes to better organize it!
         updateEnemyRobots(rc);
-    }
-
-
-    private static MapLocation destination = null;
-    private static int MAX_ATTENTION = -1;
-    private static int DISTRACTION_LEVEL = 1;
-    static int attentionToWhereIAmGoing = MAX_ATTENTION;
-    public static void moveRnd(RobotController rc) throws GameActionException {
-        if(MAX_ATTENTION == -1){
-            MAX_ATTENTION = ( rc.getMapHeight() + rc.getMapWidth() ) / 2; // The average of height and width is a good guestimate...maybe?
-        }
-        boolean isCloseEnough = destination != null && rc.getLocation().distanceSquaredTo(destination) < 5;
-        if(isCloseEnough) rc.setIndicatorString("Yep, close enough...new location!");
-        if(attentionToWhereIAmGoing < 1 ) rc.setIndicatorString("I am bored ... new location");
-        boolean shouldIChangeDirection = destination == null || attentionToWhereIAmGoing < 1 || isCloseEnough;
-        if(shouldIChangeDirection){
-            System.out.println("Changing directions now");
-            //get a random location
-            destination = new MapLocation( rng.nextInt(rc.getMapHeight()) , rng.nextInt(rc.getMapWidth()) );
-            attentionToWhereIAmGoing = MAX_ATTENTION;
-        }
-
-        Bug.goTo(destination);
-        attentionToWhereIAmGoing -= DISTRACTION_LEVEL;
-        rc.setIndicatorLine(rc.getLocation(),destination,0,0,255);
     }
 
     public static void updateEnemyRobots(RobotController rc) throws GameActionException{

@@ -167,16 +167,16 @@ public class RobotPlayer {
 
         for(RobotInfo robot : robots){
 
-            StringBuilder bld = new StringBuilder("Tower sees robot that is ");
-            if(rc.getTeam().equals(robot.getTeam()) )
-                bld.append("on the same team,");
-            if(robot.getType().isRobotType() )
-                bld.append("it is a robot, ");
-            if(Util.isPaintTower(rc.getType()) )
-                bld.append("I am a paint tower,");
-            if( rc.canSendMessage(robot.getLocation()))
-                bld.append("I CAN send a message");
-            System.out.println(bld);
+//            StringBuilder bld = new StringBuilder("Tower sees robot that is ");
+//            if(rc.getTeam().equals(robot.getTeam()) )
+//                bld.append("on the same team,");
+//            if(robot.getType().isRobotType() )
+//                bld.append("it is a robot, ");
+//            if(Util.isPaintTower(rc.getType()) )
+//                bld.append("I am a paint tower,");
+//            if( rc.canSendMessage(robot.getLocation()))
+//                bld.append("I CAN send a message");
+//            System.out.println(bld);
 
 
             if(     rc.getTeam().equals(robot.getTeam())
@@ -184,7 +184,7 @@ public class RobotPlayer {
                     && Util.isPaintTower(rc.getType())
                     && rc.canSendMessage(robot.getLocation())
             ){
-                System.out.println("Tower is sending coordinates");
+//                System.out.println("Tower is sending coordinates");
                 rc.sendMessage(robot.getLocation() , RobotInfoCodec.encode(robot));
             }
         }
@@ -319,11 +319,11 @@ public class RobotPlayer {
             MAX_ATTENTION = ( rc.getMapHeight() + rc.getMapWidth() ) / 2; // The average of height and width is a good guestimate...maybe?
         }
         boolean isCloseEnough = destination != null && rc.getLocation().distanceSquaredTo(destination) < 5;
-        if(isCloseEnough) rc.setIndicatorString("Yep, close enough...new location!");
-        if(attentionToWhereIAmGoing < 1 ) rc.setIndicatorString("I am bored ... new location");
+//        if(isCloseEnough) rc.setIndicatorString("Yep, close enough...new location!");
+//        if(attentionToWhereIAmGoing < 1 ) rc.setIndicatorString("I am bored ... new location");
         boolean shouldIChangeDirection = destination == null || attentionToWhereIAmGoing < 1 || isCloseEnough;
         if(shouldIChangeDirection){
-            System.out.println("Changing directions now");
+//            System.out.println("Changing directions now");
             //get a random location
             destination = new MapLocation( rng.nextInt(rc.getMapHeight()) , rng.nextInt(rc.getMapWidth()) );
             attentionToWhereIAmGoing = MAX_ATTENTION;

@@ -1,4 +1,4 @@
-package d_comms;
+package d_mapper;
 
 import battlecode.common.*;
 
@@ -12,13 +12,9 @@ public class PaintRefill {
     static void findNearbyPaintTowers(RobotController rc, RobotInfo[] bots, Message[] msgs) {
         for(Message msg : msgs){
             RobotInfo bot = RobotInfoCodec.decode(msg.getBytes());
-            if (recordIfPaintTower(rc, bot))
-                System.out.println("Paint Tower Location Received from Message"); // Does this ever actually work?
-
         }
         for(RobotInfo bot : bots){
             recordIfPaintTower(rc, bot);
-            // System.out.println("Paint Tower Location found from Sensors"); // spammy debugging
         }
     }
 
@@ -33,7 +29,7 @@ public class PaintRefill {
     }
 
     static void tryToRefillPaint(RobotController rc) throws GameActionException {
-        System.out.println("Moving to a paint tower");
+//        System.out.println("Moving to a paint tower");
         if(!paintTowers.isEmpty()) {
             MapLocation closestTowerLocation = getNearestPaintTower(rc);
 
@@ -53,7 +49,6 @@ public class PaintRefill {
                 }
             }
 
-
             if(rc.canSenseLocation(closestTowerLocation)) {
                 RobotInfo towerInfo = rc.senseRobotAtLocation(closestTowerLocation);
                 // Either take what's left in the tower, or however much you can carry
@@ -65,8 +60,7 @@ public class PaintRefill {
             }
 
         } else {
-            RobotPlayer.moveRnd(rc);
-            System.out.println("Oh no! I have no idea where I am going!");
+            Wanderer.moveRnd(rc);
             rc.setIndicatorString("I don't know where paint is!!!");
         }
     }

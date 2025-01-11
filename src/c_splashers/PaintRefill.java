@@ -12,8 +12,8 @@ public class PaintRefill {
     static void findNearbyPaintTowers(RobotController rc, RobotInfo[] bots, Message[] msgs) {
         for(Message msg : msgs){
             RobotInfo bot = RobotInfoCodec.decode(msg.getBytes());
-            if (recordIfPaintTower(rc, bot))
-                System.out.println("Paint Tower Location Received from Message"); // Does this ever actually work?
+//            if (recordIfPaintTower(rc, bot))
+//                System.out.println("Paint Tower Location Received from Message"); // Does this ever actually work?
 
         }
         for(RobotInfo bot : bots){
@@ -33,7 +33,7 @@ public class PaintRefill {
     }
 
     static void tryToRefillPaint(RobotController rc) throws GameActionException {
-        System.out.println("Moving to a paint tower");
+//        System.out.println("Moving to a paint tower");
         if(!paintTowers.isEmpty()) {
             MapLocation closestTowerLocation = getNearestPaintTower(rc);
 
@@ -58,7 +58,7 @@ public class PaintRefill {
                 RobotInfo towerInfo = rc.senseRobotAtLocation(closestTowerLocation);
                 // Either take what's left in the tower, or however much you can carry
                 int paintNeeded = min( towerInfo.getPaintAmount() , rc.getType().paintCapacity - rc.getPaint());
-                System.out.println("Transfering " + paintNeeded + " paint");
+//                System.out.println("Transfering " + paintNeeded + " paint");
                 if(rc.canTransferPaint(closestTowerLocation, -paintNeeded)){
                     rc.transferPaint(closestTowerLocation, -paintNeeded);
                 } //set paint to negative since we are taking it
@@ -66,7 +66,7 @@ public class PaintRefill {
 
         } else {
             RobotPlayer.moveRnd(rc);
-            System.out.println("Oh no! I have no idea where I am going!");
+//            System.out.println("Oh no! I have no idea where I am going!");
             rc.setIndicatorString("I don't know where paint is!!!");
         }
     }
