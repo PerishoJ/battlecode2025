@@ -1,4 +1,4 @@
-package f_c2;
+package f_commanding;
 
 import battlecode.common.MapLocation;
 import battlecode.common.RobotInfo;
@@ -9,21 +9,6 @@ import battlecode.common.UnitType;
  * RobotInfoCodec encodes and decodes a RobotInfo to/from an int so that it can be sent in a message.
  */
 public class RobotInfoCodec {
-
-    // basic test driver
-    public static void main(String[] args) {
-        try {
-            MapLocation locationInput = new MapLocation(5, 4);
-            RobotInfo infoInput = new RobotInfo(0, Team.B, UnitType.LEVEL_ONE_DEFENSE_TOWER, 100, locationInput, 100);
-            int messagePayload = encode(infoInput);
-            RobotInfo infoOutput = decode(messagePayload);
-            if (!equals(infoInput, infoOutput)) {
-                throw new IllegalStateException();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     // coding uses the bottom 31 of the available 32 bits: _ppppppp Thhhhhhh UUUUyyyy yyxxxxxx
     // paint (p) and health (h) are approximate, since it won't fit otherwise. ID is not sent.

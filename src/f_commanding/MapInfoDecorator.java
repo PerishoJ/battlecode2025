@@ -1,4 +1,4 @@
-package f_c2;
+package f_commanding;
 
 import battlecode.common.MapInfo;
 

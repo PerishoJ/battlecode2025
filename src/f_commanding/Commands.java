@@ -1,4 +1,4 @@
-package f_c2;
+package f_commanding;
 
 public enum Commands {
     MOVE

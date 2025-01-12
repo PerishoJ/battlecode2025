@@ -1,9 +1,12 @@
-package f_c2;
+package f_commanding;
 
 
 /**
  * This codec works like a stack, so you must read the values in the reverse order they were added.
  * Also, fairly immutable. Once you've encoded a value, it's stuck.
+ *
+ * HIGHLY suggest this be used in specific codec classes that KNOW what information needs to be serialized
+ * and implements a higher level of serialization, rather than using this directly.
  */
 class Codec {
 
