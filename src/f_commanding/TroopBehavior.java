@@ -2,6 +2,7 @@ package f_commanding;
 
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
+import battlecode.common.Message;
 import battlecode.common.RobotController;
 
 /**
@@ -9,9 +10,10 @@ import battlecode.common.RobotController;
  */
 class TroopBehavior {
 
+  public static final int UNASSIGNED = -1;
   RingBuffer<MapLocation> patrolPath;
   int DISTANCE_SQR_THRESHOLD = 4;
-
+  int squadNumber = UNASSIGNED;
   /*
   TODO LIST
    - Accept a squad leader
@@ -36,19 +38,33 @@ class TroopBehavior {
 
 
 
-  void run(RobotController rc) throws GameActionException {
+
+  void run(RobotController rc, Message[] msgs) throws GameActionException {
     if(patrolPath.poll()==null)
       return; //nowhere to go
+    for(Message msg : msgs ){
+      if(BotCmd.ASSIGN_SQUAD == Codec.getCommand(msg) ){
+        squadNumber = CmdAssignSquad.decodeSquad(msg);
+        System.out.println("Newly assigned to squad " + squadNumber);
+      }
+    }
 
     //Start moving
     Bug.goTo(patrolPath.poll());
-
     //get next location on the path
-    if(rc.getLocation().distanceSquaredTo(patrolPath.poll())<=DISTANCE_SQR_THRESHOLD){
-      if(patrolPath.take() == null){
-        System.out.println("Destination reached at " + rc.getLocation());//get next
-      }
+    if(hasReachedWaypoint(rc)){
+      getNextWayPoint(rc);
     }
+  }
+
+  private void getNextWayPoint(RobotController rc) {
+    if(patrolPath.take() == null){
+      System.out.println("Destination reached at " + rc.getLocation());//get next
+    }
+  }
+
+  private boolean hasReachedWaypoint(RobotController rc) {
+    return rc.getLocation().distanceSquaredTo(patrolPath.poll()) <= DISTANCE_SQR_THRESHOLD;
   }
 
   TroopBehavior(int patrolLength){
@@ -63,7 +79,7 @@ class TroopBehavior {
    * Adds a location to go to.
    * @param MoveCommand the next location to go to
    */
-  void handleMoveCommand(CommandMove mv){
+  void handleMoveCommand(CmdMove mv){
     addWayPoint(new MapLocation(mv.x,mv.y));
   }
 

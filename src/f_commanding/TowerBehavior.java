@@ -12,11 +12,11 @@ public class TowerBehavior {
     private static int buildOrderIt = 0;
     private static UnitType[] buildOrder = buildOrderSoldiers; // use indirection so we can change build orders quickly, and in the game.
     
-    
     static void run(RobotController rc) throws GameActionException {
         tryToUpgrade(rc);
-        buildBots(rc);
-        readIncomingMessages(rc);
+        CommanderBehavior.run();
+//        buildBots(rc);
+//        readIncomingMessages(rc);
         //scan
         RobotInfo[] robots = rc.senseNearbyRobots();
         commandYourArmies(rc, robots);

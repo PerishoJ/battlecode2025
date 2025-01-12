@@ -1,6 +1,8 @@
 package f_commanding;
 
 
+import battlecode.common.Message;
+
 /**
  * This codec works like a stack, so you must read the values in the reverse order they were added.
  * Also, fairly immutable. Once you've encoded a value, it's stuck.
@@ -42,6 +44,30 @@ class Codec {
         int value = msg & ( (1<<bytes) - 1); // mask the front values
         msg = msg >> bytes; // move to the next value
         return value;
+    }
+
+    protected BotCmd getCommand(){
+        int cmd = msg & ( (1<<BotCmd.COMMAND_SIZE_IN_BYTES) - 1);
+        if(cmd<BotCmd.values().length){
+            return BotCmd.values()[cmd];
+        } else {
+            System.err.println("Error trying to find command with ordinal of " + cmd);
+            return null;
+        }
+    }
+
+    static BotCmd getCommand(Message msg){
+        return getCommand(msg.getBytes());
+    }
+
+    static BotCmd getCommand(int msg){
+        int cmd = msg & ( (1<<BotCmd.COMMAND_SIZE_IN_BYTES) - 1);
+        if(cmd<BotCmd.values().length){
+            return BotCmd.values()[cmd];
+        } else {
+            System.err.println("Error trying to find command with ordinal of " + cmd);
+            return null;
+        }
     }
 
 }

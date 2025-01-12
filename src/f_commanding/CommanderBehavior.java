@@ -1,9 +1,11 @@
 package f_commanding;
 
-import battlecode.common.Direction;
 import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.UnitType;
+
+import java.util.List;
 
 import static battlecode.common.UnitType.*;
 
@@ -27,17 +29,26 @@ public class CommanderBehavior {
       - [] comms by dancing (mv costs only 1, pnt costs 5)
     */
 
-  static RobotController rc;
   static UnitType[][] buildOrders;
   private static UnitType[] currentBuildOrder;
   private static Squad currentTactic;
+  private static SquadBuildPhase phase = SquadBuildPhase.BUILD;
 
-  static void init(RobotController rc){
-    CommanderBehavior.rc = rc;
+  private static RobotController rc;
+  private static MapLocation lastBuilt;
+  private static int currentSquad = 1;
+
+  static void init(RobotController controller){
+    rc = controller;
   }
 
-  static enum Squad {
+  enum Squad {
     SCOUT,BUILD,RUSH,SPLASH,PATROL,RESUPPLY
+  }
+
+  enum SquadBuildPhase{
+    BUILD,
+    ASSIGN
   }
 
   static {
@@ -46,33 +57,54 @@ public class CommanderBehavior {
     buildOrders[Squad.SCOUT.ordinal()]    = new UnitType[]{SOLDIER,SOLDIER};
     buildOrders[Squad.BUILD.ordinal()]    = new UnitType[]{SOLDIER,SPLASHER,SOLDIER,SPLASHER,};
     buildOrders[Squad.RUSH.ordinal()]     = new UnitType[]{SOLDIER,SOLDIER,SOLDIER,SOLDIER};
-
     buildOrders[Squad.SPLASH.ordinal()]   = new UnitType[]{SPLASHER,SPLASHER,SOLDIER};
     buildOrders[Squad.PATROL.ordinal()]   = new UnitType[]{MOPPER,MOPPER,SPLASHER};
     buildOrders[Squad.RESUPPLY.ordinal()] = new UnitType[]{MOPPER, MOPPER};
-
   }
-
-
-
 
   static void run() throws GameActionException{
     getUpdateTactics();
     buildSquad();
   }
 
+  private static void assignSquad() {
+
+  }
+
+  private static void getUpdateTactics() {
+    currentTactic = Squad.SCOUT; // TODO this is where the AI REALLY is...after all the plumbing work gets sorted.
+  }
+
+
   private static void buildSquad() throws GameActionException {
     if(currentBuildOrder==null)
       return;
-    for (Direction dir : Direction.allDirections()){
-      if (!isSquadDone && rc.canBuildRobot(currentBuildOrder[squadProgress], rc.getLocation().add(dir) )) {
-        rc.buildRobot(currentBuildOrder[squadProgress], rc.getLocation().add(dir));
+    List<MapLocation> availBldSquares = RangePatterns.getPattern(4);
+    //error handling
+    if(availBldSquares==null){System.err.println("ERROR TRYING TO GET BUILD PATTERN FOR SIZE 4 IN CommandBehavior");return;}
+    //Build in first place you can.
+    for (MapLocation bldLoc : availBldSquares){
+      if (!isSquadDone
+          && rc.canBuildRobot(currentBuildOrder[squadProgress], bldLoc)
+      ) {
+        rc.buildRobot(currentBuildOrder[squadProgress], bldLoc);
+        lastBuilt = bldLoc;
         squadProgress++;
+        assignBotToSquad();
         if (isSquadComplete()) {
+          System.out.println("Completed "+currentSquad+"-squad-" +currentSquad+"..." );
           removeCurrentSquadFromBuild();
+          currentSquad ++; //get another squad
         }
+        //
+        break; // don't try to build anymore, it'll just waste bytecodes
       }
     }
+  }
+
+  private static void assignBotToSquad() throws GameActionException {
+    System.out.println("Attempting to send message to bot at " + lastBuilt);
+    rc.sendMessage(lastBuilt,new CmdAssignSquad().setSquadNumber(currentSquad).encode());
   }
 
   private static void removeCurrentSquadFromBuild() {
@@ -84,9 +116,7 @@ public class CommanderBehavior {
     return squadProgress == currentBuildOrder.length;
   }
 
-  private static void getUpdateTactics() {
-    currentTactic = Squad.SCOUT; // TODO this is where the AI REALLY is...after all the plumbing work gets sorted.
-  }
+
 
 
 }
